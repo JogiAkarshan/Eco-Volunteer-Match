@@ -1,0 +1,59 @@
+const express = require("express");
+const { auth } = require("../middleware/auth");
+const User = require("../models/User");
+
+const router = express.Router();
+
+// Get all users
+router.get("/", async (req, res, next) => {
+  try {
+    const users = await User.find().select("-passwordHash");
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get current user profile
+router.get("/me", auth, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-passwordHash");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get user by ID
+router.get("/:id", async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select("-passwordHash");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update user profile
+router.patch("/:id", auth, async (req, res, next) => {
+  try {
+    if (req.user.userId !== req.params.id) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    
+    const { name, city, interests } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { name, city, interests },
+      { new: true }
+    ).select("-passwordHash");
+    
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
